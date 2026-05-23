@@ -1,0 +1,31 @@
+{
+  "photographers": [
+    {"name": "Siti Aminah", "jobs": 4, "earned": 4700},
+    {"name": "Nurul Aisyah", "jobs": 2, "earned": 600},
+    {"name": "Daniel Lim", "jobs": 0, "earned": 0},
+    {"name": "Ahmad Faris", "jobs": 0, "earned": 0}
+  ],
+  "booking_statuses": {
+    "Approved": 1,
+    "Completed": 3,
+    "Deposit Paid": 2,
+    "Pending": 1,
+    "Rejected": 1
+  },
+  "revenue_trend": [
+    {"date": "2026-04-01", "amount": 600},
+    {"date": "2026-04-10", "amount": 300},
+    {"date": "2026-04-15", "amount": 600},
+    {"date": "2026-04-20", "amount": 300},
+    {"date": "2026-04-25", "amount": 1750},
+    {"date": "2026-05-06", "amount": 100},
+    {"date": "2026-05-10", "amount": 1750},
+    {"date": "2026-06-02", "amount": 600}
+  ],
+  "payment_methods": {
+    "cash": 1,
+    "Credit Card": 2,
+    "E-Wallet": 2,
+    "Online Banking": 3
+  }
+}

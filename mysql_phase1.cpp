@@ -1625,13 +1625,13 @@ void adminDashboard(MYSQL* conn, int userId) {
 
         // --- Business Reports ---
         } else if (c == 5) {
-            vector<string> bropts = {"Revenue Report", "Activity Report", "Photographer Performance", "Export Revenue to PDF", "Export Activity to PDF", "Back"};
+            vector<string> bropts = {"Revenue Report", "Activity Report", "Photographer Performance", "Show Analytics Graph (Python)", "Export Revenue to PDF", "Export Activity to PDF", "Back"};
             while (true) {
                 int brc = showMenu("BUSINESS REPORTS", bropts, "Generate and export business analytics");
-                if (brc == 5 || brc == -1) break;
+                if (brc == 6 || brc == -1) break;
 
                 // ===== Revenue Report =====
-                if (brc == 0 || brc == 3) {
+                if (brc == 0 || brc == 4) {
                     string rq = "SELECT u.name AS photographer, p.package_name, "
                                 "pay.payment_type, pay.payment_method, pay.payment_date, pay.amount "
                                 "FROM PAYMENTS pay "
@@ -1753,7 +1753,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                     }
 
                 // ===== Activity Report =====
-                } else if (brc == 1 || brc == 4) {
+                } else if (brc == 1 || brc == 5) {
                     string aq = "SELECT b.booking_id, c.name AS customer, u2.name AS photographer, "
                                 "p.package_name, b.booking_date, b.job_status "
                                 "FROM BOOKINGS b "
@@ -1955,6 +1955,130 @@ void adminDashboard(MYSQL* conn, int userId) {
                     cout << "\xBC" << CLR_RS << endl;
 
                     mysql_free_result(res);
+                    waitKey();
+                }
+
+                // ===== Show Analytics Graph (Python) =====
+                else if (brc == 3) {
+                    showScreenHeader("GENERATING GRAPH DATA");
+                    showMsg("Fetching database metrics...", "info");
+                    
+                    ostringstream json;
+                    json << "{\n";
+                    
+                    // 1. Photographer Performance
+                    json << "  \"photographers\": [\n";
+                    string q1 = "SELECT u.name, COUNT(b.booking_id) AS total_jobs, COALESCE(SUM(pay.amount), 0) AS total_earned "
+                                "FROM USERS u "
+                                "LEFT JOIN PACKAGES p ON u.user_id = p.user_id "
+                                "LEFT JOIN BOOKINGS b ON p.package_id = b.package_id AND b.job_status = 'Completed' "
+                                "LEFT JOIN PAYMENTS pay ON b.booking_id = pay.booking_id "
+                                "WHERE u.role = 'Photographer' AND u.account_status = 'Active' "
+                                "GROUP BY u.user_id, u.name ORDER BY total_earned DESC";
+                    if (!mysql_query(conn, q1.c_str())) {
+                        MYSQL_RES* res1 = mysql_store_result(conn);
+                        if (res1) {
+                            int num_rows = mysql_num_rows(res1);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res1))) {
+                                string name = row[0] ? row[0] : "";
+                                string safeName = "";
+                                for (char ch : name) {
+                                    if (ch == '"' || ch == '\\') safeName += '\\';
+                                    safeName += ch;
+                                }
+                                int jobs = row[1] ? stoi(row[1]) : 0;
+                                double earned = row[2] ? stod(row[2]) : 0.0;
+                                json << "    {\"name\": \"" << safeName << "\", \"jobs\": " << jobs << ", \"earned\": " << earned << "}";
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res1);
+                        }
+                    }
+                    json << "  ],\n";
+                    
+                    // 2. Booking Status Distribution
+                    json << "  \"booking_statuses\": {\n";
+                    string q2 = "SELECT job_status, COUNT(*) FROM BOOKINGS GROUP BY job_status";
+                    if (!mysql_query(conn, q2.c_str())) {
+                        MYSQL_RES* res2 = mysql_store_result(conn);
+                        if (res2) {
+                            int num_rows = mysql_num_rows(res2);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res2))) {
+                                string status = row[0] ? row[0] : "";
+                                int cnt = row[1] ? stoi(row[1]) : 0;
+                                json << "    \"" << status << "\": " << cnt;
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res2);
+                        }
+                    }
+                    json << "  },\n";
+                    
+                    // 3. Revenue Trend
+                    json << "  \"revenue_trend\": [\n";
+                    string q3 = "SELECT payment_date, SUM(amount) FROM PAYMENTS GROUP BY payment_date ORDER BY payment_date ASC";
+                    if (!mysql_query(conn, q3.c_str())) {
+                        MYSQL_RES* res3 = mysql_store_result(conn);
+                        if (res3) {
+                            int num_rows = mysql_num_rows(res3);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res3))) {
+                                string date = row[0] ? row[0] : "";
+                                double amount = row[1] ? stod(row[1]) : 0.0;
+                                json << "    {\"date\": \"" << date << "\", \"amount\": " << amount << "}";
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res3);
+                        }
+                    }
+                    json << "  ],\n";
+                    
+                    // 4. Payment Methods Split
+                    json << "  \"payment_methods\": {\n";
+                    string q4 = "SELECT payment_method, COUNT(*) FROM PAYMENTS GROUP BY payment_method";
+                    if (!mysql_query(conn, q4.c_str())) {
+                        MYSQL_RES* res4 = mysql_store_result(conn);
+                        if (res4) {
+                            int num_rows = mysql_num_rows(res4);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res4))) {
+                                string method = row[0] ? row[0] : "";
+                                int cnt = row[1] ? stoi(row[1]) : 0;
+                                json << "    \"" << method << "\": " << cnt;
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res4);
+                        }
+                    }
+                    json << "  }\n";
+                    
+                    json << "}\n";
+                    
+                    // Write to graph_data.json
+                    ofstream fout("graph_data.json");
+                    if (fout.is_open()) {
+                        fout << json.str();
+                        fout.close();
+                        showMsg("Analytics metrics exported successfully to graph_data.json", "ok");
+                        showMsg("Launching Python Interactive Analytics GUI...", "info");
+                        system("python show_graph.py");
+                    } else {
+                        showMsg("Failed to write to graph_data.json!", "err");
+                    }
                     waitKey();
                 }
             }

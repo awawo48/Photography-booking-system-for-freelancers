@@ -3,6 +3,7 @@
 #include "Database.hpp"
 #include "PDFGenerator.hpp"
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -1093,13 +1094,13 @@ void adminDashboard(MYSQL* conn, int userId) {
 
         // --- Business Reports ---
         else if (c == 5) {
-            vector<string> bropts = {"Revenue Report", "Activity Report", "Photographer Performance", "Export Revenue to PDF", "Export Activity to PDF", "Back"};
+            vector<string> bropts = {"Revenue Report", "Activity Report", "Photographer Performance", "Show Analytics Graph (Python)", "Export Revenue to PDF", "Export Activity to PDF", "Back"};
             while (true) {
                 int brc = showMenu("BUSINESS REPORTS", bropts, "Generate and export business analytics");
-                if (brc == 5 || brc == -1) break;
+                if (brc == 6 || brc == -1) break;
 
                 // ===== Revenue Report =====
-                if (brc == 0 || brc == 3) {
+                if (brc == 0 || brc == 4) {
                     string rq = "SELECT u.name AS photographer, p.package_name, "
                                 "pay.payment_type, pay.payment_method, pay.payment_date, pay.amount "
                                 "FROM PAYMENTS pay "
@@ -1219,7 +1220,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                     }
 
                 // ===== Activity Report =====
-                } else if (brc == 1 || brc == 4) {
+                } else if (brc == 1 || brc == 5) {
                     string aq = "SELECT b.booking_id, c.name AS customer, u2.name AS photographer, "
                                 "p.package_name, b.booking_date, b.job_status "
                                 "FROM BOOKINGS b "
@@ -1418,6 +1419,94 @@ void adminDashboard(MYSQL* conn, int userId) {
                     cout << "\xBC" << CLR_RS << endl;
 
                     
+                    waitKey();
+                }
+
+                // ===== Show Analytics Graph (Python) =====
+                else if (brc == 3) {
+                    showScreenHeader("GENERATING GRAPH DATA");
+                    showMsg("Fetching database metrics...", "info");
+                    
+                    ostringstream json;
+                    json << "{\n";
+                    
+                    // 1. Photographer Performance
+                    json << "  \"photographers\": [\n";
+                    string q1 = "SELECT u.name, COUNT(b.booking_id) AS total_jobs, COALESCE(SUM(pay.amount), 0) AS total_earned "
+                                "FROM USERS u "
+                                "LEFT JOIN PACKAGES p ON u.user_id = p.user_id "
+                                "LEFT JOIN BOOKINGS b ON p.package_id = b.package_id AND b.job_status = 'Completed' "
+                                "LEFT JOIN PAYMENTS pay ON b.booking_id = pay.booking_id "
+                                "WHERE u.role = 'Photographer' AND u.account_status = 'Active' "
+                                "GROUP BY u.user_id, u.name ORDER BY total_earned DESC";
+                    auto r1 = DBHelper::executeQuery(conn, q1, {});
+                    for (size_t i = 0; i < r1.size(); ++i) {
+                        string name = r1[i][0];
+                        string safeName = "";
+                        for (char ch : name) {
+                            if (ch == '"' || ch == '\\') safeName += '\\';
+                            safeName += ch;
+                        }
+                        int jobs = 0; try { jobs = stoi(r1[i][1]); } catch(...) {}
+                        double earned = 0.0; try { earned = stod(r1[i][2]); } catch(...) {}
+                        json << "    {\"name\": \"" << safeName << "\", \"jobs\": " << jobs << ", \"earned\": " << earned << "}";
+                        if (i < r1.size() - 1) json << ",";
+                        json << "\n";
+                    }
+                    json << "  ],\n";
+                    
+                    // 2. Booking Status Distribution
+                    json << "  \"booking_statuses\": {\n";
+                    string q2 = "SELECT job_status, COUNT(*) FROM BOOKINGS GROUP BY job_status";
+                    auto r2 = DBHelper::executeQuery(conn, q2, {});
+                    for (size_t i = 0; i < r2.size(); ++i) {
+                        string status = r2[i][0];
+                        int count = 0; try { count = stoi(r2[i][1]); } catch(...) {}
+                        json << "    \"" << status << "\": " << count;
+                        if (i < r2.size() - 1) json << ",";
+                        json << "\n";
+                    }
+                    json << "  },\n";
+                    
+                    // 3. Revenue Trend
+                    json << "  \"revenue_trend\": [\n";
+                    string q3 = "SELECT payment_date, SUM(amount) FROM PAYMENTS GROUP BY payment_date ORDER BY payment_date ASC";
+                    auto r3 = DBHelper::executeQuery(conn, q3, {});
+                    for (size_t i = 0; i < r3.size(); ++i) {
+                        string date = r3[i][0];
+                        double amount = 0.0; try { amount = stod(r3[i][1]); } catch(...) {}
+                        json << "    {\"date\": \"" << date << "\", \"amount\": " << amount << "}";
+                        if (i < r3.size() - 1) json << ",";
+                        json << "\n";
+                    }
+                    json << "  ],\n";
+                    
+                    // 4. Payment Methods Split
+                    json << "  \"payment_methods\": {\n";
+                    string q4 = "SELECT payment_method, COUNT(*) FROM PAYMENTS GROUP BY payment_method";
+                    auto r4 = DBHelper::executeQuery(conn, q4, {});
+                    for (size_t i = 0; i < r4.size(); ++i) {
+                        string method = r4[i][0];
+                        int count = 0; try { count = stoi(r4[i][1]); } catch(...) {}
+                        json << "    \"" << method << "\": " << count;
+                        if (i < r4.size() - 1) json << ",";
+                        json << "\n";
+                    }
+                    json << "  }\n";
+                    
+                    json << "}\n";
+                    
+                    // Write to graph_data.json
+                    ofstream fout("graph_data.json");
+                    if (fout.is_open()) {
+                        fout << json.str();
+                        fout.close();
+                        showMsg("Analytics metrics exported successfully to graph_data.json", "ok");
+                        showMsg("Launching Python Interactive Analytics GUI...", "info");
+                        system("python show_graph.py");
+                    } else {
+                        showMsg("Failed to write to graph_data.json!", "err");
+                    }
                     waitKey();
                 }
             }
