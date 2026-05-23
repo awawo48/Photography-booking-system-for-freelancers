@@ -2,6 +2,7 @@
 #include "UIHelper.hpp"
 #include "Database.hpp"
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <string>
 
@@ -10,7 +11,11 @@ using namespace std;
 void customerDashboard(MYSQL* conn, int userId) {
     vector<string> opts = {"Browse Available Packages", "Make a Booking", "Make Payment", "Leave a Review", "Back / Logout"};
     while (true) {
-        int c = showMenu("CUSTOMER DASHBOARD  (ID: " + to_string(userId) + ")", opts);
+        string sub = "";
+        auto notifRes = DBHelper::executeQuery(conn, "SELECT message FROM NOTIFICATIONS WHERE target_role IN ('All', 'Customer') ORDER BY created_at DESC LIMIT 1", {});
+        if (!notifRes.empty()) sub = "  " + CLR_BYL + "[BROADCAST]: " + CLR_RS + notifRes[0][0];
+
+        int c = showMenu("CUSTOMER DASHBOARD  (ID: " + to_string(userId) + ")", opts, sub);
         if (c == 4 || c == -1) break;
 
         // --- Browse Packages ---
@@ -78,6 +83,33 @@ void customerDashboard(MYSQL* conn, int userId) {
             showDivider();
             cout << endl;
             string bid = getInput("Enter Booking ID to pay: ");
+            if (bid.empty()) { showMsg("Cancelled.", "info"); waitKey(); continue; }
+
+            // Fetch original package price
+            string pq = "SELECT p.price FROM PACKAGES p JOIN BOOKINGS b ON p.package_id = b.package_id WHERE b.booking_id = ?";
+            auto pRes = DBHelper::executeQuery(conn, pq, {bid});
+            if (pRes.empty()) { showMsg("Booking not found.", "err"); waitKey(); continue; }
+
+            string price = pRes[0][0];
+            double finalPrice = 0; try { finalPrice = stod(price); } catch(...) {}
+            
+            cout << "  " << CLR_CY << "Original Package Price: " << CLR_WH << "RM " << fixed << setprecision(2) << finalPrice << CLR_RS << endl;
+            
+            string promo = getInput("Enter Promo Code (leave blank if none): ");
+            if (!promo.empty()) {
+                string promoQ = "SELECT discount_pct FROM PROMO_CODES WHERE code = ? AND valid_until >= CURDATE()";
+                auto promoRes = DBHelper::executeQuery(conn, promoQ, {promo});
+                if (!promoRes.empty()) {
+                    double pct = 0; try { pct = stod(promoRes[0][0]); } catch(...) {}
+                    finalPrice = finalPrice * (1.0 - (pct / 100.0));
+                    cout << "  " << CLR_BGR << "Promo Applied! Discount: " << pct << "%" << CLR_RS << endl;
+                    cout << "  " << CLR_CY << "Discounted Price: " << CLR_WH << "RM " << finalPrice << CLR_RS << endl;
+                } else {
+                    cout << "  " << CLR_BRD << "Invalid or Expired Promo Code." << CLR_RS << endl;
+                }
+            }
+            
+            cout << endl;
             string amt = getInput("Enter Deposit Amount (RM): ");
             string pm = getInput("Enter Payment Method: ");
             string pd = getInput("Enter Payment Date (YYYY-MM-DD): ");

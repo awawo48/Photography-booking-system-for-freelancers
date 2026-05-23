@@ -1,0 +1,4 @@
+catch throw std::length_error
+run < inputs.txt
+bt
+quit

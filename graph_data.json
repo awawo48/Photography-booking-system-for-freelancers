@@ -2,8 +2,8 @@
   "photographers": [
     {"name": "Siti Aminah", "jobs": 4, "earned": 4700},
     {"name": "Nurul Aisyah", "jobs": 2, "earned": 600},
-    {"name": "Daniel Lim", "jobs": 0, "earned": 0},
-    {"name": "Ahmad Faris", "jobs": 0, "earned": 0}
+    {"name": "Ahmad Faris", "jobs": 0, "earned": 0},
+    {"name": "Daniel Lim", "jobs": 0, "earned": 0}
   ],
   "booking_statuses": {
     "Approved": 1,

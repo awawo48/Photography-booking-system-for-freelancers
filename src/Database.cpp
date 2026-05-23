@@ -84,7 +84,16 @@ vector<vector<string>> DBHelper::executeQuery(MYSQL* conn, const string& query, 
                     if (is_null[i]) {
                         row.push_back("");
                     } else {
-                        row.push_back(string(buffers[i].data(), lengths[i]));
+                        try {
+                            size_t actual_len = lengths[i];
+                            if (actual_len > buffers[i].size()) {
+                                actual_len = buffers[i].size(); // Prevent std::length_error!
+                            }
+                            row.push_back(string(buffers[i].data(), actual_len));
+                        } catch (const std::exception& e) {
+                            cerr << "Exception in row.push_back: " << e.what() << " lengths[" << i << "]=" << lengths[i] << endl;
+                            throw;
+                        }
                     }
                 }
                 results.push_back(row);

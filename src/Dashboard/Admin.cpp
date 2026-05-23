@@ -2,6 +2,7 @@
 #include "UIHelper.hpp"
 #include "Database.hpp"
 #include "PDFGenerator.hpp"
+#include "Security.hpp"
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -13,7 +14,7 @@
 using namespace std;
 
 void adminDashboard(MYSQL* conn, int userId) {
-    vector<string> opts = {"User Management", "Booking Monitoring", "Dispute Management", "Payment Management", "Review Management", "Business Reports", "Back / Logout"};
+    vector<string> opts = {"User Management", "Booking Monitoring", "Dispute Management", "Payment Management", "Review Management", "Business Reports", "System Settings & Configuration", "Back / Logout"};
     while (true) {
         // Fetch total revenue & admin commission for dashboard display
         string dashSub = "";
@@ -22,14 +23,28 @@ void adminDashboard(MYSQL* conn, int userId) {
         if (!results.empty() && !results[0][0].empty()) {
             double totalRev = 0;
             try { totalRev = stod(results[0][0]); } catch(...) {}
-            double adminComm = totalRev * 0.05;
+            
+            // Dynamic commission
+            double commRate = 0.05;
+            auto comRes = DBHelper::executeQuery(conn, "SELECT setting_value FROM SYSTEM_SETTINGS WHERE setting_key = 'admin_commission'", {});
+            if (!comRes.empty()) { try { commRate = stod(comRes[0][0]); } catch(...) {} }
+            
+            double adminComm = totalRev * commRate;
             ostringstream oss;
             oss << fixed << setprecision(2);
-            oss << "Revenue: RM " << totalRev << "  |  Your Commission (5%): RM " << adminComm;
+            oss << "Revenue: RM " << totalRev << "  |  Your Commission (" << (commRate * 100) << "%): RM " << adminComm;
             dashSub = oss.str();
         }
+        
+        // Fetch recent broadcast
+        auto notifRes = DBHelper::executeQuery(conn, "SELECT message FROM NOTIFICATIONS WHERE target_role IN ('All', 'Admin') ORDER BY created_at DESC LIMIT 1", {});
+        if (!notifRes.empty()) {
+            if (!dashSub.empty()) dashSub += "\n\n";
+            dashSub += "  " + CLR_BYL + "[BROADCAST]: " + CLR_RS + notifRes[0][0];
+        }
+
         int c = showMenu("ADMIN DASHBOARD  (ID: " + to_string(userId) + ")", opts, dashSub);
-        if (c == 6 || c == -1) break;
+        if (c == 7 || c == -1) break;
 
         // --- User Management ---
         if (c == 0) {
@@ -73,15 +88,14 @@ void adminDashboard(MYSQL* conn, int userId) {
                     else
                         q = "SELECT user_id, name, email, role, account_status FROM USERS WHERE role != 'Admin'";
 
-                    if (mysql_query(conn, q.c_str())) { showMsg(string("Error: ") + mysql_error(conn), "err"); waitKey(); continue; }
-                    MYSQL_RES* res = mysql_store_result(conn);
-                    if (!res || mysql_num_rows(res) == 0) {
+                    auto results = DBHelper::executeQuery(conn, q, {});
+                    if (results.empty()) {
                         showMsg(bc == 2 ? "No banned/suspended users found." : "No users found.", "info");
-                        if (res)  waitKey(); continue;
+                        waitKey(); continue;
                     }
 
-                    // Column widths: ID(4) | Name(18) | Email(26) | Role(14) | Status(10)
-                    int cID=4, cName=18, cEmail=26, cRole=14, cStatus=10;
+                    // Column widths: ID(6) | Name(24) | Email(32) | Role(14) | Status(12)
+                    int cID=6, cName=24, cEmail=32, cRole=14, cStatus=12;
 
                     // Table top border
                     cout << CLR_CY << "  \xC9";
@@ -178,7 +192,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                 if (results.empty()) {
                     showMsg("No users found.", "info");
                 } else {
-                        int cID=4, cName=18, cEmail=26, cPhone=14, cRole=14, cSt=10;
+                        int cID=6, cName=24, cEmail=32, cPhone=16, cRole=14, cSt=12;
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
                         for(int i=0;i<cName+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -255,7 +269,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                 if (results.empty()) {
                     showMsg("No users found.", "info");
                 } else {
-                        int cID=4, cName=18, cEmail=26, cRole=14, cSt=10;
+                        int cID=6, cName=24, cEmail=32, cRole=14, cSt=12;
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
                         for(int i=0;i<cName+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -331,7 +345,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                 if (results.empty()) {
                     showMsg("No users matched '" + keyword + "'.", "info");
                 } else {
-                            int cID=4, cName=18, cEmail=26, cPhone=14, cRole=14, cSt=10;
+                            int cID=6, cName=24, cEmail=32, cPhone=16, cRole=14, cSt=12;
                             cout << CLR_CY << "  \xC9";
                             for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
                             for(int i=0;i<cName+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -405,7 +419,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No bookings found.", "info");
                         if (bres) mysql_free_result(bres); waitKey(); continue;
                     }
-                    int cBI=4, cCu=16, cPk=18, cDt=12, cSs=13;
+                    int cBI=6, cCu=24, cPk=26, cDt=14, cSs=15;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cBI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -484,7 +498,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No bookings found.", "info");
                         if (bres) mysql_free_result(bres); waitKey(); continue;
                     }
-                    int cBI=4, cCu=16, cPk=18, cDt=12, cSs=13;
+                    int cBI=6, cCu=24, cPk=26, cDt=14, cSs=15;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cBI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -563,8 +577,8 @@ void adminDashboard(MYSQL* conn, int userId) {
                         waitKey(); continue;
                     }
 
-                // Column widths: ID(4) | Customer(16) | Package(18) | Date(12) | Status(13) | Price(10)
-                int cID=4, cCust=16, cPkg=18, cDate=12, cStat=13, cPrice=10;
+                // Column widths: ID(6) | Customer(24) | Package(26) | Date(14) | Status(15) | Price(12)
+                int cID=6, cCust=24, cPkg=26, cDate=14, cStat=15, cPrice=12;
                 // Table top border
                 cout << CLR_CY << "  ";
                 cout << "\xC9";
@@ -714,8 +728,8 @@ void adminDashboard(MYSQL* conn, int userId) {
                         waitKey(); continue;
                     }
 
-                // Column widths: ID(4) | Reporter(16) | Booking(8) | Action(10) | Description(30)
-                int cID=4, cReporter=16, cBooking=8, cAction=10, cDesc=30;
+                // Column widths: ID(6) | Reporter(24) | Booking(12) | Action(16) | Description(45)
+                int cID=6, cReporter=24, cBooking=12, cAction=16, cDesc=45;
 
                 // Table top border
                 cout << CLR_CY << "  \xC9";
@@ -892,7 +906,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No payment records found.", "info");
                         waitKey(); continue;
                     }
-                    int cPI=4, cCu=14, cPk=16, cTy=14, cMe=14, cDt=12, cAm=10;
+                    int cPI=6, cCu=22, cPk=24, cTy=16, cMe=16, cDt=14, cAm=12;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cPI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -963,7 +977,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No payments found.", "info");
                         waitKey(); continue;
                     }
-                    int cPI=4, cCu=16, cTy=14, cAm=10, cDt=12;
+                    int cPI=6, cCu=24, cTy=16, cAm=12, cDt=14;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cPI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1024,8 +1038,8 @@ void adminDashboard(MYSQL* conn, int userId) {
                 int rmc = showMenu("REVIEW MANAGEMENT", rmopts, "Moderate customer reviews");
                 if (rmc == 2 || rmc == -1) break;
 
-                if (rmc == 0) {
-                    showScreenHeader("ALL CUSTOMER REVIEWS");
+                if (rmc == 0 || rmc == 1) {
+                    showScreenHeader(rmc == 0 ? "ALL CUSTOMER REVIEWS" : "DELETE REVIEW");
                     string q = "SELECT rv.review_id, c.name AS customer, p.package_name, "
                                "rv.rating, rv.comment "
                                "FROM REVIEWS rv "
@@ -1038,7 +1052,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No reviews found.", "info");
                         waitKey(); continue;
                     }
-                    int cRI=4, cCu=16, cPk=18, cRt=6, cCm=30;
+                    int cRI=6, cCu=22, cPk=25, cRt=12, cCm=50;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cRI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1060,12 +1074,27 @@ void adminDashboard(MYSQL* conn, int userId) {
                     for(int i=0;i<cCm+2;i++) cout<<"\xCD";
                     cout << "\xB9" << CLR_RS << endl;
                     for (const auto& row : results) {
+                        string rating = row[3];
+                        int r = 0; try { r = stoi(rating); } catch(...) {}
+
+                        // Print columns before Rating (CP437 box chars)
                         cout << CLR_CY << "  \xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[0],cRI+1) << CLR_CY << "\xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[1],cCu+1) << CLR_CY << "\xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[2],cPk+1) << CLR_CY << "\xBA" << CLR_RS
-                             << CLR_BYL << " " << padStr(row[3],cRt+1) << CLR_RS
-                             << CLR_CY << "\xBA" << CLR_RS
+                             << CLR_BYL << " ";
+                        cout.flush();
+
+                        // Temporarily switch to UTF-8 for star emoji
+                        UINT prevCP = GetConsoleOutputCP();
+                        SetConsoleOutputCP(65001);
+                        for (int i=0; i<r; i++) cout << "\xE2\xAD\x90"; // ⭐
+                        for (int i=r; i<5; i++) cout << "  "; // spaces for empty stars
+                        cout.flush();
+                        SetConsoleOutputCP(prevCP);
+
+                        // Continue with CP437 box chars
+                        cout << "   " << CLR_RS << CLR_CY << "\xBA" << CLR_RS
                              << CLR_GY << " " << padStr(row[4],cCm+1)
                              << CLR_CY << "\xBA" << CLR_RS << endl;
                     }
@@ -1077,15 +1106,82 @@ void adminDashboard(MYSQL* conn, int userId) {
                     for(int i=0;i<cCm+2;i++) cout<<"\xCD";
                     cout << "\xBC" << CLR_RS << endl;
                     
-                    cout << endl;
-                    string rid = getInput("Enter Review ID to delete (0 to cancel): ");
-                    if (rid != "0" && !rid.empty()) {
-                        string confirm = getInput("Type 'yes' to confirm delete review #" + rid + ": ");
-                        if (confirm == "yes") {
-                            string dq = "DELETE FROM REVIEWS WHERE review_id = " + rid;
-                            if (DBHelper::executeUpdate(conn, dq, {}) < 0) showMsg("Error updating database.", "err");
-                            else showMsg("Review #" + rid + " deleted successfully.", "ok");
-                        } else showMsg("Delete cancelled.", "info");
+                    if (rmc == 1) {
+                        cout << endl;
+                        string rid = getInput("Enter Review ID to delete (0 to cancel): ");
+                        if (rid != "0" && !rid.empty()) {
+                            string confirm = getInput("Type 'yes' to confirm delete review #" + rid + ": ");
+                            if (confirm == "yes") {
+                                string dq = "DELETE FROM REVIEWS WHERE review_id = " + rid;
+                                if (DBHelper::executeUpdate(conn, dq, {}) < 0) showMsg("Error updating database.", "err");
+                                else showMsg("Review #" + rid + " deleted successfully.", "ok");
+                            } else showMsg("Delete cancelled.", "info");
+                        }
+                    } else if (rmc == 0) {
+                        cout << endl;
+                        string rid = getInput("Enter Review ID to view details (0 to go back): ");
+                        if (rid != "0" && !rid.empty()) {
+                            string vq = "SELECT rv.review_id, c.name, p.package_name, ph.name, rv.rating, rv.comment "
+                                        "FROM REVIEWS rv "
+                                        "JOIN BOOKINGS b ON rv.booking_id = b.booking_id "
+                                        "JOIN USERS c ON b.user_id = c.user_id "
+                                        "JOIN PACKAGES p ON b.package_id = p.package_id "
+                                        "JOIN USERS ph ON p.user_id = ph.user_id "
+                                        "WHERE rv.review_id = " + rid;
+                            auto vr = DBHelper::executeQuery(conn, vq, {});
+                            if (vr.empty()) {
+                                showMsg("Review not found.", "err");
+                            } else {
+                                cls();
+                                showScreenHeader("REVIEW DETAILS #" + vr[0][0]);
+                                showField("Customer Name", vr[0][1], 30);
+                                showField("Package Name", vr[0][2], 30);
+                                showField("Photographer", vr[0][3], 30);
+                                
+                                int ratingVal = 0; try { ratingVal = stoi(vr[0][4]); } catch(...) {}
+                                cout << "  " << CLR_GY << left << setw(30) << "Rating" << CLR_RS << ": ";
+                                UINT prevCP = GetConsoleOutputCP();
+                                SetConsoleOutputCP(65001);
+                                for(int i=0; i<ratingVal; i++) cout << "\xE2\xAD\x90";
+                                cout << CLR_RS << endl;
+                                SetConsoleOutputCP(prevCP);
+
+                                cout << endl;
+                                
+                                string comment = vr[0][5];
+                                vector<string> lines;
+                                if (comment.empty()) {
+                                    lines.push_back("No comment provided.");
+                                } else {
+                                    int maxLen = BWIDTH - 8;
+                                    int start = 0;
+                                    while (start < (int)comment.length()) {
+                                        int len = maxLen;
+                                        if (start + len >= (int)comment.length()) {
+                                            lines.push_back(comment.substr(start));
+                                            break;
+                                        }
+                                        int lastSpace = comment.rfind(' ', start + len);
+                                        if (lastSpace != string::npos && lastSpace > start) {
+                                            len = lastSpace - start;
+                                            lines.push_back(comment.substr(start, len));
+                                            start = lastSpace + 1;
+                                        } else {
+                                            lines.push_back(comment.substr(start, len));
+                                            start += len;
+                                        }
+                                    }
+                                }
+
+                                cout << CLR_CY << "  \xC9"; for(int i=0;i<BWIDTH-4;i++) cout<<"\xCD"; cout<<"\xBB" << CLR_RS << endl;
+                                cout << CLR_CY << "  \xBA " << CLR_WH << padStr("Full Comment:", BWIDTH-6) << CLR_CY << " \xBA" << CLR_RS << endl;
+                                cout << CLR_CY << "  \xCC"; for(int i=0;i<BWIDTH-4;i++) cout<<"\xCD"; cout<<"\xB9" << CLR_RS << endl;
+                                for (const string& line : lines) {
+                                    cout << CLR_CY << "  \xBA   " << CLR_GY << padStr(line, BWIDTH-8) << CLR_CY << " \xBA" << CLR_RS << endl;
+                                }
+                                cout << CLR_CY << "  \xC8"; for(int i=0;i<BWIDTH-4;i++) cout<<"\xCD"; cout<<"\xBC" << CLR_RS << endl;
+                            }
+                        }
                     }
                     waitKey();
                 }
@@ -1128,7 +1224,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                     if (brc == 0) {
                         // Display table on screen
                         showScreenHeader("REVENUE REPORT");
-                        int cPh=16, cPkg=18, cType=14, cMethod=14, cDate=12, cAmt=10;
+                        int cPh=22, cPkg=25, cType=16, cMethod=16, cDate=14, cAmt=12;
 
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cPh+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1251,7 +1347,7 @@ void adminDashboard(MYSQL* conn, int userId) {
 
                     if (brc == 1) {
                         showScreenHeader("ACTIVITY REPORT");
-                        int cID=4, cCust=14, cPhot=14, cPkg=16, cDate=12, cStat=13;
+                        int cID=6, cCust=22, cPhot=22, cPkg=25, cDate=14, cStat=15;
 
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1365,7 +1461,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         waitKey(); continue;
                     }
 
-                    int cRank=5, cName=20, cJobs=10, cEarned=14;
+                    int cRank=7, cName=26, cJobs=12, cEarned=16;
 
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cRank+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1507,6 +1603,106 @@ void adminDashboard(MYSQL* conn, int userId) {
                     } else {
                         showMsg("Failed to write to graph_data.json!", "err");
                     }
+                    waitKey();
+                }
+            }
+        }
+
+        // --- System Settings & Configuration ---
+        else if (c == 6) {
+            vector<string> sysopts = {"Configure Commission Rate", "Manage Promo Codes", "Send Broadcast Notification", "Change Admin Password", "Back"};
+            while (true) {
+                int sc = showMenu("SYSTEM SETTINGS & CONFIGURATION", sysopts, "Manage platform settings and announcements");
+                if (sc == 4 || sc == -1) break;
+
+                // Configure Commission
+                if (sc == 0) {
+                    showScreenHeader("CONFIGURE COMMISSION RATE");
+                    string rate = getInput("Enter new commission rate (e.g. 0.05 for 5%, 0.1 for 10%): ");
+                    if (!rate.empty()) {
+                        double r = 0;
+                        try { r = stod(rate); } catch(...) { showMsg("Invalid rate.", "err"); waitKey(); continue; }
+                        string uq = "INSERT INTO SYSTEM_SETTINGS (setting_key, setting_value) VALUES ('admin_commission', ?) ON DUPLICATE KEY UPDATE setting_value = ?";
+                        if (DBHelper::executeUpdate(conn, uq, {rate, rate}) < 0) showMsg("Failed to update.", "err");
+                        else showMsg("Commission rate updated to " + to_string(r * 100) + "%.", "ok");
+                    } else showMsg("Cancelled.", "info");
+                    waitKey();
+                }
+                
+                // Manage Promo Codes
+                else if (sc == 1) {
+                    showScreenHeader("MANAGE PROMO CODES");
+                    auto res = DBHelper::executeQuery(conn, "SELECT code, discount_pct, valid_until FROM PROMO_CODES", {});
+                    if (res.empty()) cout << "  No promo codes found.\n\n";
+                    else {
+                        for (auto& row : res) {
+                            cout << "  " << CLR_CY << "[" << row[0] << "] " << CLR_RS << row[1] << "% OFF (Valid until " << row[2] << ")\n";
+                        }
+                        cout << endl;
+                    }
+                    
+                    cout << "  1. Add Promo Code\n  2. Delete Promo Code\n  3. Cancel\n\n";
+                    string opt = getInput("Select an option: ");
+                    if (opt == "1") {
+                        string code = getInput("Enter Promo Code (e.g. NEWYEAR20): ");
+                        string disc = getInput("Enter Discount Percentage (e.g. 20): ");
+                        string exp = getInput("Enter Expiry Date (YYYY-MM-DD): ");
+                        if (!code.empty() && !disc.empty() && !exp.empty()) {
+                            if (DBHelper::executeUpdate(conn, "INSERT INTO PROMO_CODES (code, discount_pct, valid_until) VALUES (?, ?, ?)", {code, disc, exp}) < 0)
+                                showMsg("Failed to add promo code.", "err");
+                            else showMsg("Promo code added!", "ok");
+                        } else showMsg("Cancelled.", "info");
+                    } else if (opt == "2") {
+                        string code = getInput("Enter Promo Code to delete: ");
+                        if (!code.empty()) {
+                            if (DBHelper::executeUpdate(conn, "DELETE FROM PROMO_CODES WHERE code = ?", {code}) < 0)
+                                showMsg("Failed to delete.", "err");
+                            else showMsg("Promo code deleted.", "ok");
+                        } else showMsg("Cancelled.", "info");
+                    }
+                    waitKey();
+                }
+                
+                // Send Broadcast Notification
+                else if (sc == 2) {
+                    showScreenHeader("SEND BROADCAST NOTIFICATION");
+                    string msg = getInput("Enter Notification Message: ");
+                    if (!msg.empty()) {
+                        cout << "  Target Audience:\n  1. All Users\n  2. Customers\n  3. Photographers\n\n";
+                        string topt = getInput("Select Target (1-3): ");
+                        string target = "All";
+                        if (topt == "2") target = "Customer";
+                        else if (topt == "3") target = "Photographer";
+                        
+                        if (DBHelper::executeUpdate(conn, "INSERT INTO NOTIFICATIONS (message, target_role) VALUES (?, ?)", {msg, target}) < 0)
+                            showMsg("Failed to send broadcast.", "err");
+                        else showMsg("Broadcast sent to " + target + "!", "ok");
+                    } else showMsg("Cancelled.", "info");
+                    waitKey();
+                }
+                
+                // Change Password
+                else if (sc == 3) {
+                    showScreenHeader("CHANGE ADMIN PASSWORD");
+                    string oldP = getInput("Enter Old Password: ");
+                    if (!oldP.empty()) {
+                        string hashedOld = Security::hashSHA256(oldP);
+                        auto res = DBHelper::executeQuery(conn, "SELECT user_id FROM USERS WHERE user_id = ? AND password = ?", {to_string(userId), hashedOld});
+                        if (res.empty()) {
+                            showMsg("Incorrect old password.", "err");
+                        } else {
+                            string newP = getInput("Enter New Password: ");
+                            if (newP.empty()) { showMsg("Cancelled.", "info"); }
+                            else {
+                                string hashedNew = Security::hashSHA256(newP);
+                                if (DBHelper::executeUpdate(conn, "UPDATE USERS SET password = ? WHERE user_id = ?", {hashedNew, to_string(userId)}) < 0) {
+                                    showMsg("Failed to update password.", "err");
+                                } else {
+                                    showMsg("Password updated successfully!", "ok");
+                                }
+                            }
+                        }
+                    } else showMsg("Cancelled.", "info");
                     waitKey();
                 }
             }

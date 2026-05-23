@@ -10,7 +10,11 @@ using namespace std;
 void photographerDashboard(MYSQL* conn, int userId) {
     vector<string> opts = {"Manage Profile/Portfolio", "Manage Packages", "Manage Schedule", "Booking Management", "Back / Logout"};
     while (true) {
-        int c = showMenu("PHOTOGRAPHER DASHBOARD  (ID: " + to_string(userId) + ")", opts);
+        string sub = "";
+        auto notifRes = DBHelper::executeQuery(conn, "SELECT message FROM NOTIFICATIONS WHERE target_role IN ('All', 'Photographer') ORDER BY created_at DESC LIMIT 1", {});
+        if (!notifRes.empty()) sub = "  " + CLR_BYL + "[BROADCAST]: " + CLR_RS + notifRes[0][0];
+
+        int c = showMenu("PHOTOGRAPHER DASHBOARD  (ID: " + to_string(userId) + ")", opts, sub);
         if (c == 4 || c == -1) break;
 
         if (c == 0) {

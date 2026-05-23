@@ -1,6 +1,6 @@
 @echo off
 echo Compiling Photography Booking System (Modular)...
-g++ -std=c++17 -I"C:\Program Files\MariaDB\MariaDB Connector C64\include" -Iinclude ^
+g++ -g -std=c++17 -I"C:\Program Files\MariaDB\MariaDB Connector C64\include" -Iinclude ^
     src/main.cpp ^
     src/Database.cpp ^
     src/UIHelper.cpp ^

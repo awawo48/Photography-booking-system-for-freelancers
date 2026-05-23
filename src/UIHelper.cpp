@@ -96,8 +96,13 @@ void drawTitle(int x, int y, int w, const string& title) {
 
 string padStr(const string& s, int w) {
     string r = s;
-    while ((int)r.length() < w) r += " ";
-    if ((int)r.length() > w) r = r.substr(0, w);
+    try {
+        while ((int)r.length() < w) r += " ";
+        if ((int)r.length() > w) r = r.substr(0, w);
+    } catch(const std::exception& e) {
+        cerr << "Exception in padStr: " << e.what() << " w=" << w << " s.length=" << s.length() << endl;
+        throw;
+    }
     return r;
 }
 
@@ -127,7 +132,13 @@ int showMenu(const string& title, const vector<string>& opts, const string& sub)
             int totalPad = BWIDTH - 2 - visLen;
             moveTo(sx, currY + i);
             cout << CLR_CY << "\xBA" << CLR_RS << line;
-            for (int p = 0; p < totalPad; p++) cout << " ";
+            try {
+                string pad_str(totalPad < 0 ? 0 : totalPad, ' ');
+                cout << pad_str;
+            } catch(const std::exception& e) {
+                cerr << "Exception in showMenu string pad: " << e.what() << " totalPad=" << totalPad << endl;
+                throw;
+            }
             cout << CLR_CY << "\xBA" << CLR_RS;
         }
         currY += n;
