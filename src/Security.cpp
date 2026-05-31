@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <bcrypt.h>
 #include <vector>
+#include <random>
 
 namespace Security {
 
@@ -35,6 +36,29 @@ std::string hashSHA256(const std::string& input) {
         hexStr += hexChars[b & 0x0F];
     }
     return hexStr;
+}
+
+std::string generateSalt(int length) {
+    std::vector<BYTE> buffer(length);
+    if (BCryptGenRandom(NULL, buffer.data(), length, BCRYPT_USE_SYSTEM_PREFERRED_RNG) < 0) {
+        // Fallback to std::random_device if BCryptGenRandom fails (unlikely, but good practice)
+        std::random_device rd;
+        for (int i = 0; i < length; ++i) {
+            buffer[i] = static_cast<BYTE>(rd() & 0xFF);
+        }
+    }
+    
+    std::string hexStr;
+    const char hexChars[] = "0123456789abcdef";
+    for (BYTE b : buffer) {
+        hexStr += hexChars[(b & 0xF0) >> 4];
+        hexStr += hexChars[b & 0x0F];
+    }
+    return hexStr;
+}
+
+std::string hashWithSalt(const std::string& salt, const std::string& password) {
+    return hashSHA256(salt + password);
 }
 
 }

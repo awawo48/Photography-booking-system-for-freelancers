@@ -162,6 +162,7 @@ int showMenu(const string& title, const vector<string>& opts, const string& sub)
 }
 
 string getInput(const string& prompt, bool pwd) {
+    if (pwd) return getPasswordInput(prompt);
     showCur();
     cout << CLR_BCY << "  \x10 " << CLR_WH << prompt << CLR_RS;
     string s;
@@ -174,11 +175,154 @@ string getInput(const string& prompt, bool pwd) {
             cout << "\b \b";
         } else if (k >= 32 && k < 127) {
             s += (char)k;
-            cout << (pwd ? '*' : (char)k);
+            cout << (char)k;
         }
     }
     cout << endl;
     return s;
+}
+
+string getPasswordInput(const string& prompt) {
+    showCur();
+    cout << CLR_BCY << "  \x10 " << CLR_WH << prompt << CLR_RS;
+    string s;
+    while (true) {
+        int k = getKey();
+        if (k == K_ENTER) break;
+        if (k == K_ESC) { s = ""; break; }
+        if (k == K_BKSP && !s.empty()) {
+            s.pop_back();
+            cout << "\b \b"; // Clears the asterisk
+        } else if (k >= 32 && k < 127) {
+            s += (char)k;
+            cout << '*'; // Masked character
+        }
+    }
+    cout << endl;
+    return s;
+}
+
+int getIntInput(const string& prompt) {
+    showCur();
+    int value;
+    while (true) {
+        cout << CLR_BCY << "  \x10 " << CLR_WH << prompt << CLR_RS;
+        if (cin >> value) {
+            // Success, consume any trailing characters in the buffer
+            cin.ignore(10000, '\n');
+            break;
+        } else {
+            // Failure (user typed letters instead of numbers)
+            cin.clear(); // Clear the error flag
+            cin.ignore(10000, '\n'); // Discard invalid input
+            showMsg("Invalid input! Please enter a valid number.", "err");
+        }
+    }
+    return value;
+}
+
+void showPaginatedTable(const string& title, const vector<string>& headers, const vector<vector<string>>& rows, int limit) {
+    int totalRows = (int)rows.size();
+    if (totalRows == 0) {
+        showScreenHeader(title);
+        showMsg("No records found.", "info");
+        waitKey();
+        return;
+    }
+    
+    int totalPages = (totalRows + limit - 1) / limit;
+    int page = 0;
+    
+    // Auto-calculate column widths based on headers and data
+    vector<int> colWidths(headers.size(), 0);
+    for (size_t i = 0; i < headers.size(); ++i) {
+        colWidths[i] = max(colWidths[i], (int)headers[i].length());
+    }
+    for (const auto& row : rows) {
+        for (size_t i = 0; i < row.size() && i < headers.size(); ++i) {
+            colWidths[i] = max(colWidths[i], (int)row[i].length());
+        }
+    }
+    
+    while (true) {
+        cls(); hideCur();
+        int sx = (getTermW() - BWIDTH) / 2;
+        if (sx < 1) sx = 1;
+        drawTitle(sx, 1, BWIDTH, title + " (Page " + to_string(page + 1) + " of " + to_string(totalPages) + ")");
+        
+        int y = 4;
+        
+        // Print top border
+        moveTo(sx, y++);
+        cout << CLR_CY << "  \xC9";
+        for (size_t i = 0; i < colWidths.size(); ++i) {
+            for (int j = 0; j < colWidths[i] + 2; ++j) cout << "\xCD";
+            if (i < colWidths.size() - 1) cout << "\xCB";
+        }
+        cout << "\xBB" << CLR_RS;
+
+        // Print headers
+        moveTo(sx, y++);
+        cout << CLR_CY << "  \xBA" << CLR_RS << CLR_BD << CLR_BWH;
+        for (size_t i = 0; i < headers.size(); ++i) {
+            cout << " " << padStr(headers[i], colWidths[i]) << " " << CLR_CY << "\xBA" << CLR_RS << CLR_BD << CLR_BWH;
+        }
+        cout << CLR_RS;
+
+        // Header separator
+        moveTo(sx, y++);
+        cout << CLR_CY << "  \xCC";
+        for (size_t i = 0; i < colWidths.size(); ++i) {
+            for (int j = 0; j < colWidths[i] + 2; ++j) cout << "\xCD";
+            if (i < colWidths.size() - 1) cout << "\xCE";
+        }
+        cout << "\xB9" << CLR_RS;
+
+        // Print rows
+        int startIdx = page * limit;
+        int endIdx = min(startIdx + limit, totalRows);
+        for (int r = startIdx; r < endIdx; ++r) {
+            moveTo(sx, y++);
+            cout << CLR_CY << "  \xBA" << CLR_RS << CLR_WH;
+            for (size_t i = 0; i < rows[r].size() && i < headers.size(); ++i) {
+                // Status color heuristic
+                string cell = rows[r][i];
+                string color = CLR_WH;
+                if (cell == "Active" || cell == "Completed") color = CLR_BGR;
+                else if (cell == "Pending" || cell == "Pending_Verification" || cell == "Approved" || cell == "Deposit Paid") color = CLR_BYL;
+                else if (cell == "Banned" || cell == "Rejected") color = CLR_BRD;
+                else if (cell == "Suspended" || cell == "Photographer") color = CLR_BMG;
+                else if (cell == "Admin") color = CLR_BCY;
+                else if (cell == "Customer") color = CLR_BYL;
+
+                cout << color << " " << padStr(cell, colWidths[i]) << " " << CLR_CY << "\xBA" << CLR_RS << CLR_WH;
+            }
+            cout << CLR_RS;
+        }
+
+        // Bottom border
+        moveTo(sx, y++);
+        cout << CLR_CY << "  \xC8";
+        for (size_t i = 0; i < colWidths.size(); ++i) {
+            for (int j = 0; j < colWidths[i] + 2; ++j) cout << "\xCD";
+            if (i < colWidths.size() - 1) cout << "\xCA";
+        }
+        cout << "\xBC" << CLR_RS;
+        
+        // Print bottom instructions
+        y += 2;
+        moveTo(sx, y);
+        cout << CLR_CY << "\xBA " << CLR_GY << "Use Left/Right (or Up/Down) to flip pages. Press Esc to exit." << CLR_RS;
+        
+        int k = getKey();
+        if (k == K_ESC || k == K_ENTER) break;
+        if (k == K_UP || k == 75) { // 75 is Left arrow
+            if (page > 0) page--;
+        } else if (k == K_DOWN || k == 77) { // 77 is Right arrow
+            if (page < totalPages - 1) page++;
+        }
+    }
+    showCur();
 }
 
 void showMsg(const string& text, const string& type) {

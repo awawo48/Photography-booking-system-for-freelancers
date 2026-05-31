@@ -1,0 +1,2 @@
+ALTER TABLE USERS ADD COLUMN user_code VARCHAR(30) UNIQUE AFTER user_id;
+CREATE INDEX idx_user_code ON USERS(user_code);

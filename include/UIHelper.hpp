@@ -36,6 +36,9 @@ std::string padStr(const std::string& s, int w);
 // ==================== Components / Widgets ====================
 int showMenu(const std::string& title, const std::vector<std::string>& opts, const std::string& sub = "");
 std::string getInput(const std::string& prompt, bool pwd = false);
+std::string getPasswordInput(const std::string& prompt);
+int getIntInput(const std::string& prompt);
+void showPaginatedTable(const std::string& title, const std::vector<std::string>& headers, const std::vector<std::vector<std::string>>& rows, int limit = 10);
 void showMsg(const std::string& text, const std::string& type = "ok");
 void showField(const std::string& label, const std::string& val, int lw = 18);
 void showDivider();

@@ -10,6 +10,7 @@ g++ -g -std=c++17 -I"C:\Program Files\MariaDB\MariaDB Connector C64\include" -Ii
     src/Dashboard/Customer.cpp ^
     src/Dashboard/Photographer.cpp ^
     src/Security.cpp ^
+    src/CodeGenerator.cpp ^
     -o modular_app.exe libmariadb.dll -lbcrypt
 if %errorlevel% neq 0 (
     echo Compilation FAILED!
