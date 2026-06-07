@@ -5,8 +5,79 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <ctime>
 
 using namespace std;
+
+static bool isValidDateStr(const string& dateStr) {
+    if (dateStr.length() != 10) return false;
+    if (dateStr[4] != '-' || dateStr[7] != '-') return false;
+    for (int i = 0; i < 10; ++i) {
+        if (i == 4 || i == 7) continue;
+        if (!isdigit(dateStr[i])) return false;
+    }
+    int y = stoi(dateStr.substr(0, 4));
+    int m = stoi(dateStr.substr(5, 2));
+    int d = stoi(dateStr.substr(8, 2));
+    if (y < 2000 || y > 3000) return false;
+    if (m < 1 || m > 12) return false;
+    
+    int daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)) {
+        daysInMonth[1] = 29;
+    }
+    if (d < 1 || d > daysInMonth[m - 1]) return false;
+    
+    return true;
+}
+
+static string getCurrentDateStr() {
+    time_t now = time(0);
+    tm t;
+    localtime_s(&t, &now);
+    char buf[16];
+    strftime(buf, sizeof(buf), "%Y-%m-%d", &t);
+    return string(buf);
+}
+
+static vector<string> getDateRange(const string& startDateStr, const string& endDateStr) {
+    vector<string> dates;
+    if (!isValidDateStr(startDateStr) || !isValidDateStr(endDateStr)) {
+        return dates;
+    }
+    
+    tm tStart = {};
+    tStart.tm_year = stoi(startDateStr.substr(0, 4)) - 1900;
+    tStart.tm_mon = stoi(startDateStr.substr(5, 2)) - 1;
+    tStart.tm_mday = stoi(startDateStr.substr(8, 2));
+    
+    tm tEnd = {};
+    tEnd.tm_year = stoi(endDateStr.substr(0, 4)) - 1900;
+    tEnd.tm_mon = stoi(endDateStr.substr(5, 2)) - 1;
+    tEnd.tm_mday = stoi(endDateStr.substr(8, 2));
+    
+    time_t start = mktime(&tStart);
+    time_t end = mktime(&tEnd);
+    
+    if (start == -1 || end == -1 || start > end) {
+        return dates;
+    }
+    
+    tm currentTm = tStart;
+    while (true) {
+        time_t current = mktime(&currentTm);
+        if (current == -1 || current > end) {
+            break;
+        }
+        
+        char buf[16];
+        strftime(buf, sizeof(buf), "%Y-%m-%d", &currentTm);
+        dates.push_back(string(buf));
+        
+        currentTm.tm_mday++;
+    }
+    return dates;
+}
 
 void photographerDashboard(MYSQL* conn, const UserSession& session) {
     int userId = session.userId;
@@ -72,14 +143,119 @@ void photographerDashboard(MYSQL* conn, const UserSession& session) {
 
         // ── Manage Schedule ──
         } else if (c == 2) {
-            showScreenHeader("MANAGE SCHEDULE");
-            string tdate = getInput("Enter Target Date (YYYY-MM-DD): ");
-            string status = getInput("Enter Status (Available/Blocked): ");
-            if (tdate.empty()) { showMsg("Cancelled.", "info"); waitKey(); continue; }
-            string q = "INSERT INTO SCHEDULES (user_id, target_date, status) VALUES (?, ?, ?)";
-            if (DBHelper::executeUpdate(conn, q, {to_string(userId), tdate, status}) < 0) showMsg("Error updating database.", "err");
-            else showMsg("Schedule updated!", "ok");
-            waitKey();
+            vector<string> schedOpts = {"View Current Schedule", "Set Date/Range Status", "Clear Date/Range Status", "Back"};
+            while (true) {
+                int sc = showMenu("MANAGE SCHEDULE", schedOpts, "Set your availability (Available / Blocked)");
+                if (sc == 3 || sc == -1) break;
+
+                if (sc == 0) {
+                    showScreenHeader("CURRENT SCHEDULE");
+                    string q = "SELECT target_date, status FROM SCHEDULES WHERE user_id = ? ORDER BY target_date ASC";
+                    auto results = DBHelper::executeQuery(conn, q, {to_string(userId)});
+                    if (results.empty()) {
+                        showMsg("No custom schedule entries set. (Default availability is assumed)", "info");
+                    } else {
+                        vector<string> headers = {"Date", "Status"};
+                        showPaginatedTable("MY SCHEDULE", headers, results, 10);
+                    }
+                    waitKey();
+                }
+                else if (sc == 1) {
+                    showScreenHeader("SET DATE/RANGE STATUS");
+                    string startD = getInput("Enter Start Date (YYYY-MM-DD) [or press ESC to cancel]: ");
+                    if (startD.empty()) { showMsg("Cancelled.", "info"); waitKey(); continue; }
+                    if (!isValidDateStr(startD)) { showMsg("Invalid start date format or value.", "err"); waitKey(); continue; }
+                    
+                    string curDate = getCurrentDateStr();
+                    if (startD < curDate) { showMsg("Cannot configure dates in the past.", "err"); waitKey(); continue; }
+
+                    string endD = getInput("Enter End Date (YYYY-MM-DD, or leave empty for single date): ");
+                    if (endD.empty()) endD = startD;
+                    else {
+                        if (!isValidDateStr(endD)) { showMsg("Invalid end date format or value.", "err"); waitKey(); continue; }
+                        if (endD < startD) { showMsg("End date cannot be earlier than start date.", "err"); waitKey(); continue; }
+                    }
+
+                    string status = getInput("Enter Status (Available/Blocked): ");
+                    if (status != "Available" && status != "Blocked") {
+                        showMsg("Invalid status! Must be 'Available' or 'Blocked'.", "err");
+                        waitKey(); continue;
+                    }
+
+                    vector<string> datesToSet = getDateRange(startD, endD);
+                    if (datesToSet.empty()) {
+                        showMsg("Error generating date range.", "err");
+                        waitKey(); continue;
+                    }
+
+                    bool allOk = true;
+                    for (const string& dt : datesToSet) {
+                        string checkQ = "SELECT COUNT(*) FROM SCHEDULES WHERE user_id = ? AND target_date = ?";
+                        auto checkRes = DBHelper::executeQuery(conn, checkQ, {to_string(userId), dt});
+                        int count = 0;
+                        if (!checkRes.empty() && !checkRes[0].empty()) {
+                            try { count = stoi(checkRes[0][0]); } catch(...) {}
+                        }
+
+                        if (count > 0) {
+                            string upQ = "UPDATE SCHEDULES SET status = ? WHERE user_id = ? AND target_date = ?";
+                            if (DBHelper::executeUpdate(conn, upQ, {status, to_string(userId), dt}) < 0) {
+                                allOk = false;
+                            }
+                        } else {
+                            string insQ = "INSERT INTO SCHEDULES (user_id, target_date, status) VALUES (?, ?, ?)";
+                            if (DBHelper::executeUpdate(conn, insQ, {to_string(userId), dt, status}) < 0) {
+                                allOk = false;
+                            }
+                        }
+                    }
+
+                    if (allOk) {
+                        showMsg("Schedule updated successfully for " + to_string(datesToSet.size()) + " day(s)!", "ok");
+                    } else {
+                        showMsg("Some updates might have failed. Please check your schedule.", "err");
+                    }
+                    waitKey();
+                }
+                else if (sc == 2) {
+                    showScreenHeader("CLEAR DATE/RANGE STATUS");
+                    string startD = getInput("Enter Start Date to Clear (YYYY-MM-DD) [or press ESC to cancel]: ");
+                    if (startD.empty()) { showMsg("Cancelled.", "info"); waitKey(); continue; }
+                    if (!isValidDateStr(startD)) { showMsg("Invalid start date format.", "err"); waitKey(); continue; }
+
+                    string endD = getInput("Enter End Date to Clear (YYYY-MM-DD, or leave empty for single date): ");
+                    if (endD.empty()) endD = startD;
+                    else {
+                        if (!isValidDateStr(endD)) { showMsg("Invalid end date format.", "err"); waitKey(); continue; }
+                        if (endD < startD) { showMsg("End date cannot be earlier than start date.", "err"); waitKey(); continue; }
+                    }
+
+                    vector<string> datesToClear = getDateRange(startD, endD);
+                    if (datesToClear.empty()) {
+                        showMsg("Error generating date range.", "err");
+                        waitKey(); continue;
+                    }
+
+                    string confirm = getInput("Type 'yes' to confirm clearing status for " + to_string(datesToClear.size()) + " day(s): ");
+                    if (confirm == "yes") {
+                        bool allOk = true;
+                        for (const string& dt : datesToClear) {
+                            string delQ = "DELETE FROM SCHEDULES WHERE user_id = ? AND target_date = ?";
+                            if (DBHelper::executeUpdate(conn, delQ, {to_string(userId), dt}) < 0) {
+                                allOk = false;
+                            }
+                        }
+                        if (allOk) {
+                            showMsg("Schedule cleared successfully!", "ok");
+                        } else {
+                            showMsg("Some dates could not be cleared.", "err");
+                        }
+                    } else {
+                        showMsg("Cancelled.", "info");
+                    }
+                    waitKey();
+                }
+            }
 
         // ── Booking Management (Expanded Sub-Menu) ──
         } else if (c == 3) {

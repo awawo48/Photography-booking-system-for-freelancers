@@ -11,12 +11,132 @@
 
 using namespace std;
 
+static bool isNameUnique(MYSQL* conn, const string& name) {
+    string q = "SELECT COUNT(*) FROM USERS WHERE name = ?";
+    auto res = DBHelper::executeQuery(conn, q, {name});
+    if (!res.empty() && !res[0].empty()) {
+        return res[0][0] == "0";
+    }
+    return true;
+}
+
+static bool isEmailUnique(MYSQL* conn, const string& email) {
+    string q = "SELECT COUNT(*) FROM USERS WHERE email = ?";
+    auto res = DBHelper::executeQuery(conn, q, {email});
+    if (!res.empty() && !res[0].empty()) {
+        return res[0][0] == "0";
+    }
+    return true;
+}
+
+static bool isValidEmailFormat(const string& email) {
+    size_t atPos = email.find('@');
+    if (atPos == string::npos || atPos == 0 || atPos == email.length() - 1) {
+        return false;
+    }
+    if (email.find('@', atPos + 1) != string::npos) {
+        return false;
+    }
+    size_t dotPos = email.find('.', atPos + 1);
+    if (dotPos == string::npos || dotPos == atPos + 1 || dotPos == email.length() - 1) {
+        return false;
+    }
+    return true;
+}
+
+static bool isValidPhoneFormat(const string& phone) {
+    if (phone.empty()) return false;
+    size_t start = 0;
+    if (phone[0] == '+') start = 1;
+    
+    int digitCount = 0;
+    for (size_t i = start; i < phone.length(); ++i) {
+        if (phone[i] == '-' || phone[i] == ' ') continue;
+        if (!isdigit(phone[i])) return false;
+        digitCount++;
+    }
+    return digitCount >= 8 && digitCount <= 15;
+}
+
 void registerUser(MYSQL* conn) {
     showScreenHeader("REGISTRATION");
-    string name = getInput("Enter Name: ");
-    string email = getInput("Enter Email: ");
-    string password = getPasswordInput("Enter Password: ");
-    string phone = getInput("Enter Phone Number: ");
+    
+    string name;
+    while (true) {
+        name = getInput("Enter Name (or press ESC to cancel): ");
+        if (name.empty()) {
+            showMsg("Registration cancelled.", "err");
+            waitKey(); return;
+        }
+        
+        bool allSpaces = true;
+        for (char c : name) {
+            if (!isspace(c)) { allSpaces = false; break; }
+        }
+        if (allSpaces) {
+            showMsg("Name cannot consist of only spaces.", "err");
+            cout << endl;
+            continue;
+        }
+
+        if (!isNameUnique(conn, name)) {
+            showMsg("Name is already taken by another user.", "err");
+            cout << endl;
+        } else {
+            break;
+        }
+    }
+
+    string email;
+    while (true) {
+        email = getInput("Enter Email (or press ESC to cancel): ");
+        if (email.empty()) {
+            showMsg("Registration cancelled.", "err");
+            waitKey(); return;
+        }
+
+        if (!isValidEmailFormat(email)) {
+            showMsg("Invalid email format (must be user@example.com).", "err");
+            cout << endl;
+        } else if (!isEmailUnique(conn, email)) {
+            showMsg("Email is already registered.", "err");
+            cout << endl;
+        } else {
+            break;
+        }
+    }
+
+    string password;
+    while (true) {
+        password = getPasswordInput("Enter Password (or press ESC to cancel): ");
+        if (password.empty()) {
+            showMsg("Registration cancelled.", "err");
+            waitKey(); return;
+        }
+
+        if (password.length() < 6) {
+            showMsg("Password must be at least 6 characters long.", "err");
+            cout << endl;
+        } else {
+            break;
+        }
+    }
+
+    string phone;
+    while (true) {
+        phone = getInput("Enter Phone Number (or press ESC to cancel): ");
+        if (phone.empty()) {
+            showMsg("Registration cancelled.", "err");
+            waitKey(); return;
+        }
+
+        if (!isValidPhoneFormat(phone)) {
+            showMsg("Invalid phone number (must be 8-15 digits, e.g., +60123456789).", "err");
+            cout << endl;
+        } else {
+            break;
+        }
+    }
 
     cout << endl;
     vector<string> roles = {"Customer", "Photographer"};
@@ -26,11 +146,6 @@ void registerUser(MYSQL* conn) {
     string rc = getInput("Enter choice (1/2): ");
     string role = (rc == "2") ? "Photographer" : "Customer";
     string status = (role == "Photographer") ? "Pending_Verification" : "Active";
-
-    if (name.empty() || email.empty() || password.empty()) {
-        showMsg("Registration cancelled.", "err");
-        waitKey(); return;
-    }
 
     string salt = Security::generateSalt();
     string hashedPwd = Security::hashWithSalt(salt, password);
@@ -49,10 +164,44 @@ void registerUser(MYSQL* conn) {
                 showScreenHeader("PHOTOGRAPHER VERIFICATION");
                 showMsg("Please answer the following screening questions to complete your application.", "info");
                 cout << endl;
-                string q1 = getInput("1. Provide a link to your online portfolio (e.g., Instagram, Google Drive, Website): ");
-                string q2 = getInput("2. What is your primary camera body and lens setup? (e.g., Sony a6400 + 18-105mm f/4): ");
-                string q3 = getInput("3. How many years of professional photography experience do you have?: ");
-                string q4 = getInput("4. Which operational areas/states do you cover? (e.g., Kelantan, Melaka, Klang Valley): ");
+                
+                string q1, q2, q3, q4;
+                while (true) {
+                    q1 = getInput("1. Provide a link to your online portfolio (e.g., Instagram, Google Drive, Website): ");
+                    if (q1.empty()) {
+                        showMsg("Portfolio link cannot be empty.", "err");
+                        cout << endl;
+                    } else {
+                        break;
+                    }
+                }
+                while (true) {
+                    q2 = getInput("2. What is your primary camera body and lens setup? (e.g., Sony a6400 + 18-105mm f/4): ");
+                    if (q2.empty()) {
+                        showMsg("Camera setup cannot be empty.", "err");
+                        cout << endl;
+                    } else {
+                        break;
+                    }
+                }
+                while (true) {
+                    q3 = getInput("3. How many years of professional photography experience do you have?: ");
+                    if (q3.empty()) {
+                        showMsg("Experience years cannot be empty.", "err");
+                        cout << endl;
+                    } else {
+                        break;
+                    }
+                }
+                while (true) {
+                    q4 = getInput("4. Which operational areas/states do you cover? (e.g., Kelantan, Melaka, Klang Valley): ");
+                    if (q4.empty()) {
+                        showMsg("Coverage areas cannot be empty.", "err");
+                        cout << endl;
+                    } else {
+                        break;
+                    }
+                }
                 
                 string insApp = "INSERT INTO photographer_applications (user_id, portfolio_link, camera_setup, experience_years, coverage_areas) VALUES (?, ?, ?, ?, ?)";
                 DBHelper::executeUpdate(conn, insApp, {uid, q1, q2, q3, q4});
