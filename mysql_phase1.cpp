@@ -520,8 +520,8 @@ void adminDashboard(MYSQL* conn, int userId) {
                         if (res) mysql_free_result(res); waitKey(); continue;
                     }
 
-                    // Column widths: ID(4) | Name(18) | Email(26) | Role(14) | Status(10)
-                    int cID=4, cName=18, cEmail=26, cRole=14, cStatus=10;
+                    // Column widths: ID(6) | Name(24) | Email(32) | Role(14) | Status(12)
+                    int cID=6, cName=24, cEmail=32, cRole=14, cStatus=12;
 
                     // Table top border
                     cout << CLR_CY << "  \xC9";
@@ -622,7 +622,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No users found.", "info");
                         if (res) mysql_free_result(res);
                     } else {
-                        int cID=4, cName=18, cEmail=26, cPhone=14, cRole=14, cSt=10;
+                        int cID=6, cName=24, cEmail=32, cPhone=16, cRole=14, cSt=12;
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
                         for(int i=0;i<cName+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -704,7 +704,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No users found.", "info");
                         if (res) mysql_free_result(res);
                     } else {
-                        int cID=4, cName=18, cEmail=26, cRole=14, cSt=10;
+                        int cID=6, cName=24, cEmail=32, cRole=14, cSt=12;
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
                         for(int i=0;i<cName+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -785,7 +785,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                             showMsg("No users matched '" + keyword + "'.", "info");
                             if (res) mysql_free_result(res);
                         } else {
-                            int cID=4, cName=18, cEmail=26, cPhone=14, cRole=14, cSt=10;
+                            int cID=6, cName=24, cEmail=32, cPhone=16, cRole=14, cSt=12;
                             cout << CLR_CY << "  \xC9";
                             for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
                             for(int i=0;i<cName+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -860,7 +860,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No bookings found.", "info");
                         if (bres) mysql_free_result(bres); waitKey(); continue;
                     }
-                    int cBI=4, cCu=16, cPk=18, cDt=12, cSs=13;
+                    int cBI=6, cCu=24, cPk=26, cDt=14, cSs=15;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cBI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -939,7 +939,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No bookings found.", "info");
                         if (bres) mysql_free_result(bres); waitKey(); continue;
                     }
-                    int cBI=4, cCu=16, cPk=18, cDt=12, cSs=13;
+                    int cBI=6, cCu=24, cPk=26, cDt=14, cSs=15;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cBI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1019,8 +1019,8 @@ void adminDashboard(MYSQL* conn, int userId) {
                     if (res) mysql_free_result(res); waitKey(); continue;
                 }
 
-                // Column widths: ID(4) | Customer(16) | Package(18) | Date(12) | Status(13) | Price(10)
-                int cID=4, cCust=16, cPkg=18, cDate=12, cStat=13, cPrice=10;
+                // Column widths: ID(6) | Customer(24) | Package(26) | Date(14) | Status(15) | Price(12)
+                int cID=6, cCust=24, cPkg=26, cDate=14, cStat=15, cPrice=12;
                 int tableW = 1 + (cID+2) + 1 + (cCust+2) + 1 + (cPkg+2) + 1 + (cDate+2) + 1 + (cStat+2) + 1 + (cPrice+2) + 1;
 
                 // Table top border
@@ -1172,8 +1172,8 @@ void adminDashboard(MYSQL* conn, int userId) {
                     if (res) mysql_free_result(res); waitKey(); continue;
                 }
 
-                // Column widths: ID(4) | Reporter(16) | Booking(8) | Action(10) | Description(30)
-                int cID=4, cReporter=16, cBooking=8, cAction=10, cDesc=30;
+                // Column widths: ID(6) | Reporter(24) | Booking(12) | Action(16) | Description(45)
+                int cID=6, cReporter=24, cBooking=12, cAction=16, cDesc=45;
 
                 // Table top border
                 cout << CLR_CY << "  \xC9";
@@ -1350,7 +1350,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No payment records found.", "info");
                         if (res) mysql_free_result(res); waitKey(); continue;
                     }
-                    int cPI=4, cCu=14, cPk=16, cTy=14, cMe=14, cDt=12, cAm=10;
+                    int cPI=6, cCu=22, cPk=24, cTy=16, cMe=16, cDt=14, cAm=12;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cPI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1422,7 +1422,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No payments found.", "info");
                         if (res) mysql_free_result(res); waitKey(); continue;
                     }
-                    int cPI=4, cCu=16, cTy=14, cAm=10, cDt=12;
+                    int cPI=6, cCu=24, cTy=16, cAm=12, cDt=14;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cPI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1498,7 +1498,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No reviews found.", "info");
                         if (res) mysql_free_result(res); waitKey(); continue;
                     }
-                    int cRI=4, cCu=16, cPk=18, cRt=6, cCm=30;
+                    int cRI=6, cCu=22, cPk=25, cRt=6, cCm=50;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cRI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1524,10 +1524,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         totalReviews++;
                         string rating = row[3]?row[3]:"0";
                         try { totalRating += stod(rating); } catch(...) {}
-                        string stars = "";
                         int r = 0; try { r = stoi(rating); } catch(...) {}
-                        for (int i=0;i<r;i++) stars += "\xDB";
-                        for (int i=r;i<5;i++) stars += "\xB0";
                         string comment = row[4]?row[4]:"";
                         if ((int)comment.length() > cCm) comment = comment.substr(0, cCm-3) + "...";
                         string ratingColor = (r >= 4) ? CLR_BGR : ((r >= 3) ? CLR_BYL : CLR_BRD);
@@ -1535,8 +1532,18 @@ void adminDashboard(MYSQL* conn, int userId) {
                              << CLR_WH << " " << padStr(row[0]?row[0]:"",cRI+1) << CLR_CY << "\xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[1]?row[1]:"",cCu+1) << CLR_CY << "\xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[2]?row[2]:"",cPk+1) << CLR_CY << "\xBA" << CLR_RS
-                             << ratingColor << " " << padStr(stars,cRt+1) << CLR_RS
-                             << CLR_CY << "\xBA" << CLR_RS
+                             << ratingColor << " ";
+                        cout.flush();
+
+                        // Temporarily switch to UTF-8 for star emoji
+                        UINT prevCP = GetConsoleOutputCP();
+                        SetConsoleOutputCP(65001);
+                        for (int i=0; i<r; i++) cout << "\xE2\x98\x85"; // ★
+                        for (int i=r; i<5; i++) cout << "\xE2\x98\x86"; // ☆
+                        cout.flush();
+                        SetConsoleOutputCP(prevCP);
+
+                        cout << " " << CLR_RS << CLR_CY << "\xBA" << CLR_RS
                              << CLR_GY << " " << padStr(comment,cCm+1)
                              << CLR_CY << "\xBA" << CLR_RS << endl;
                     }
@@ -1570,7 +1577,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         showMsg("No reviews found.", "info");
                         if (res) mysql_free_result(res); waitKey(); continue;
                     }
-                    int cRI=4, cCu=16, cPk=18, cRt=6, cCm=30;
+                    int cRI=6, cCu=22, cPk=25, cRt=6, cCm=50;
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cRI+2;i++) cout<<"\xCD"; cout<<"\xCB";
                     for(int i=0;i<cCu+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1593,11 +1600,25 @@ void adminDashboard(MYSQL* conn, int userId) {
                     cout << "\xB9" << CLR_RS << endl;
                     MYSQL_ROW row;
                     while ((row = mysql_fetch_row(res))) {
+                        string rating = row[3]?row[3]:"0";
+                        int r = 0; try { r = stoi(rating); } catch(...) {}
+
                         cout << CLR_CY << "  \xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[0]?row[0]:"",cRI+1) << CLR_CY << "\xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[1]?row[1]:"",cCu+1) << CLR_CY << "\xBA" << CLR_RS
                              << CLR_WH << " " << padStr(row[2]?row[2]:"",cPk+1) << CLR_CY << "\xBA" << CLR_RS
-                             << CLR_WH << " " << padStr(row[3]?row[3]:"",cRt+1) << CLR_CY << "\xBA" << CLR_RS
+                             << CLR_WH << " ";
+                        cout.flush();
+
+                        // Temporarily switch to UTF-8 for star emoji
+                        UINT prevCP = GetConsoleOutputCP();
+                        SetConsoleOutputCP(65001);
+                        for (int i=0; i<r; i++) cout << "\xE2\x98\x85"; // ★
+                        for (int i=r; i<5; i++) cout << "\xE2\x98\x86"; // ☆
+                        cout.flush();
+                        SetConsoleOutputCP(prevCP);
+
+                        cout << " " << CLR_RS << CLR_CY << "\xBA" << CLR_RS
                              << CLR_GY << " " << padStr(row[4]?row[4]:"",cCm+1)
                              << CLR_CY << "\xBA" << CLR_RS << endl;
                     }
@@ -1625,13 +1646,13 @@ void adminDashboard(MYSQL* conn, int userId) {
 
         // --- Business Reports ---
         } else if (c == 5) {
-            vector<string> bropts = {"Revenue Report", "Activity Report", "Photographer Performance", "Export Revenue to PDF", "Export Activity to PDF", "Back"};
+            vector<string> bropts = {"Revenue Report", "Activity Report", "Photographer Performance", "Show Analytics Graph (Python)", "Export Revenue to PDF", "Export Activity to PDF", "Back"};
             while (true) {
                 int brc = showMenu("BUSINESS REPORTS", bropts, "Generate and export business analytics");
-                if (brc == 5 || brc == -1) break;
+                if (brc == 6 || brc == -1) break;
 
                 // ===== Revenue Report =====
-                if (brc == 0 || brc == 3) {
+                if (brc == 0 || brc == 4) {
                     string rq = "SELECT u.name AS photographer, p.package_name, "
                                 "pay.payment_type, pay.payment_method, pay.payment_date, pay.amount "
                                 "FROM PAYMENTS pay "
@@ -1661,7 +1682,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                     if (brc == 0) {
                         // Display table on screen
                         showScreenHeader("REVENUE REPORT");
-                        int cPh=16, cPkg=18, cType=14, cMethod=14, cDate=12, cAmt=10;
+                        int cPh=22, cPkg=25, cType=16, cMethod=16, cDate=14, cAmt=12;
 
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cPh+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1753,7 +1774,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                     }
 
                 // ===== Activity Report =====
-                } else if (brc == 1 || brc == 4) {
+                } else if (brc == 1 || brc == 5) {
                     string aq = "SELECT b.booking_id, c.name AS customer, u2.name AS photographer, "
                                 "p.package_name, b.booking_date, b.job_status "
                                 "FROM BOOKINGS b "
@@ -1786,7 +1807,7 @@ void adminDashboard(MYSQL* conn, int userId) {
 
                     if (brc == 1) {
                         showScreenHeader("ACTIVITY REPORT");
-                        int cID=4, cCust=14, cPhot=14, cPkg=16, cDate=12, cStat=13;
+                        int cID=6, cCust=22, cPhot=22, cPkg=25, cDate=14, cStat=15;
 
                         cout << CLR_CY << "  \xC9";
                         for(int i=0;i<cID+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1901,7 +1922,7 @@ void adminDashboard(MYSQL* conn, int userId) {
                         if (res) mysql_free_result(res); waitKey(); continue;
                     }
 
-                    int cRank=5, cName=20, cJobs=10, cEarned=14;
+                    int cRank=7, cName=26, cJobs=12, cEarned=16;
 
                     cout << CLR_CY << "  \xC9";
                     for(int i=0;i<cRank+2;i++) cout<<"\xCD"; cout<<"\xCB";
@@ -1955,6 +1976,130 @@ void adminDashboard(MYSQL* conn, int userId) {
                     cout << "\xBC" << CLR_RS << endl;
 
                     mysql_free_result(res);
+                    waitKey();
+                }
+
+                // ===== Show Analytics Graph (Python) =====
+                else if (brc == 3) {
+                    showScreenHeader("GENERATING GRAPH DATA");
+                    showMsg("Fetching database metrics...", "info");
+                    
+                    ostringstream json;
+                    json << "{\n";
+                    
+                    // 1. Photographer Performance
+                    json << "  \"photographers\": [\n";
+                    string q1 = "SELECT u.name, COUNT(b.booking_id) AS total_jobs, COALESCE(SUM(pay.amount), 0) AS total_earned "
+                                "FROM USERS u "
+                                "LEFT JOIN PACKAGES p ON u.user_id = p.user_id "
+                                "LEFT JOIN BOOKINGS b ON p.package_id = b.package_id AND b.job_status = 'Completed' "
+                                "LEFT JOIN PAYMENTS pay ON b.booking_id = pay.booking_id "
+                                "WHERE u.role = 'Photographer' AND u.account_status = 'Active' "
+                                "GROUP BY u.user_id, u.name ORDER BY total_earned DESC";
+                    if (!mysql_query(conn, q1.c_str())) {
+                        MYSQL_RES* res1 = mysql_store_result(conn);
+                        if (res1) {
+                            int num_rows = mysql_num_rows(res1);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res1))) {
+                                string name = row[0] ? row[0] : "";
+                                string safeName = "";
+                                for (char ch : name) {
+                                    if (ch == '"' || ch == '\\') safeName += '\\';
+                                    safeName += ch;
+                                }
+                                int jobs = row[1] ? stoi(row[1]) : 0;
+                                double earned = row[2] ? stod(row[2]) : 0.0;
+                                json << "    {\"name\": \"" << safeName << "\", \"jobs\": " << jobs << ", \"earned\": " << earned << "}";
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res1);
+                        }
+                    }
+                    json << "  ],\n";
+                    
+                    // 2. Booking Status Distribution
+                    json << "  \"booking_statuses\": {\n";
+                    string q2 = "SELECT job_status, COUNT(*) FROM BOOKINGS GROUP BY job_status";
+                    if (!mysql_query(conn, q2.c_str())) {
+                        MYSQL_RES* res2 = mysql_store_result(conn);
+                        if (res2) {
+                            int num_rows = mysql_num_rows(res2);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res2))) {
+                                string status = row[0] ? row[0] : "";
+                                int cnt = row[1] ? stoi(row[1]) : 0;
+                                json << "    \"" << status << "\": " << cnt;
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res2);
+                        }
+                    }
+                    json << "  },\n";
+                    
+                    // 3. Revenue Trend
+                    json << "  \"revenue_trend\": [\n";
+                    string q3 = "SELECT payment_date, SUM(amount) FROM PAYMENTS GROUP BY payment_date ORDER BY payment_date ASC";
+                    if (!mysql_query(conn, q3.c_str())) {
+                        MYSQL_RES* res3 = mysql_store_result(conn);
+                        if (res3) {
+                            int num_rows = mysql_num_rows(res3);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res3))) {
+                                string date = row[0] ? row[0] : "";
+                                double amount = row[1] ? stod(row[1]) : 0.0;
+                                json << "    {\"date\": \"" << date << "\", \"amount\": " << amount << "}";
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res3);
+                        }
+                    }
+                    json << "  ],\n";
+                    
+                    // 4. Payment Methods Split
+                    json << "  \"payment_methods\": {\n";
+                    string q4 = "SELECT payment_method, COUNT(*) FROM PAYMENTS GROUP BY payment_method";
+                    if (!mysql_query(conn, q4.c_str())) {
+                        MYSQL_RES* res4 = mysql_store_result(conn);
+                        if (res4) {
+                            int num_rows = mysql_num_rows(res4);
+                            MYSQL_ROW row;
+                            int count = 0;
+                            while ((row = mysql_fetch_row(res4))) {
+                                string method = row[0] ? row[0] : "";
+                                int cnt = row[1] ? stoi(row[1]) : 0;
+                                json << "    \"" << method << "\": " << cnt;
+                                count++;
+                                if (count < num_rows) json << ",";
+                                json << "\n";
+                            }
+                            mysql_free_result(res4);
+                        }
+                    }
+                    json << "  }\n";
+                    
+                    json << "}\n";
+                    
+                    // Write to graph_data.json
+                    ofstream fout("graph_data.json");
+                    if (fout.is_open()) {
+                        fout << json.str();
+                        fout.close();
+                        showMsg("Analytics metrics exported successfully to graph_data.json", "ok");
+                        showMsg("Launching Python Interactive Analytics GUI...", "info");
+                        system("python show_graph.py");
+                    } else {
+                        showMsg("Failed to write to graph_data.json!", "err");
+                    }
                     waitKey();
                 }
             }

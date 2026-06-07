@@ -1,0 +1,2 @@
+USE photography_db;
+ALTER TABLE USERS ADD COLUMN salt VARCHAR(64) DEFAULT NULL AFTER password;
