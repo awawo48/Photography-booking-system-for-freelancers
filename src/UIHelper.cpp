@@ -71,10 +71,32 @@ void drawBoxMid(int x, int y, int w, const string& color) {
     cout << "\xB9" << CLR_RS;
 }
 
+int getVisibleLength(const string& s) {
+    int len = 0;
+    for (size_t i = 0; i < s.length(); ) {
+        if (s[i] == '\033') {
+            i++;
+            if (i < s.length() && s[i] == '[') {
+                i++;
+                while (i < s.length() && ((s[i] >= '0' && s[i] <= '9') || s[i] == ';' || s[i] == '?')) {
+                    i++;
+                }
+                if (i < s.length() && (s[i] == 'm' || s[i] == 'K' || s[i] == 'J' || s[i] == 'h' || s[i] == 'l')) {
+                    i++;
+                }
+            }
+        } else {
+            len++;
+            i++;
+        }
+    }
+    return len;
+}
+
 void drawBoxRow(int x, int y, int w, const string& text, const string& color) {
     moveTo(x, y);
     cout << (color.empty() ? CLR_CY : color) << "\xBA" << CLR_RS;
-    int pad = w - 2 - (int)text.length();
+    int pad = w - 2 - getVisibleLength(text);
     if (pad < 0) pad = 0;
     cout << text;
     for (int i = 0; i < pad; i++) cout << " ";
@@ -117,8 +139,15 @@ int showMenu(const string& title, const vector<string>& opts, const string& sub)
         drawTitle(sx, sy, BWIDTH, title);
         int currY = sy + 3;
         if (!sub.empty()) {
-            drawBoxRow(sx, currY, BWIDTH, "  " + CLR_DM + sub + CLR_RS);
-            currY++;
+            size_t start = 0;
+            while (start < sub.length()) {
+                size_t end = sub.find('\n', start);
+                string line = (end == string::npos) ? sub.substr(start) : sub.substr(start, end - start);
+                drawBoxRow(sx, currY, BWIDTH, "  " + CLR_DM + line + CLR_RS);
+                currY++;
+                if (end == string::npos) break;
+                start = end + 1;
+            }
         }
         drawBoxRow(sx, currY++, BWIDTH, "");
         for (int i = 0; i < n; i++) {
